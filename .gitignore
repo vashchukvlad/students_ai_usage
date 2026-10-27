@@ -220,3 +220,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# TypeScript incremental build metadata
+*.tsbuildinfo

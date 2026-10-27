@@ -3,7 +3,7 @@ name = "students-ai-usage-backend"
 version = "0.1.0"
 description = "Student AI Usage Dashboard API"
 requires-python = ">=3.12"
-dependencies = ["fastapi>=0.115,<1", "uvicorn[standard]>=0.34,<1", "psycopg[binary]>=3.2,<4"]
+dependencies = ["fastapi>=0.115,<1", "uvicorn[standard]>=0.34,<1", "psycopg[binary]>=3.2,<4", "PyJWT>=2.10,<3", "pwdlib[argon2]>=0.3,<1", "email-validator>=2.2,<3"]
 
 [dependency-groups]
 dev = ["httpx>=0.28,<1", "pytest>=8,<10", "ruff>=0.14,<1"]

@@ -223,3 +223,6 @@ __marimo__/
 
 # TypeScript incremental build metadata
 *.tsbuildinfo
+
+# Task scratch and unverified source files
+work/

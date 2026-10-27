@@ -8,7 +8,8 @@ RUN --mount=type=secret,id=proxy_ca \
     if [ -f /run/secrets/proxy_ca ]; then export SSL_CERT_FILE=/run/secrets/proxy_ca; fi; \
     uv sync --frozen --no-dev
 COPY app ./app
-RUN chmod -R a+rX /app/app && useradd --create-home appuser
+COPY data ./data
+RUN chmod -R a+rX /app/app /app/data && useradd --create-home appuser
 USER appuser
 EXPOSE 8000
 CMD [".venv/bin/uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

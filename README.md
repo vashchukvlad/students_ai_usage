@@ -10,7 +10,7 @@ The goal is to turn student survey data into clear, interactive visualizations t
 - **Frontend:** React, TypeScript, Vite
 - **Development & tooling:** Docker, uv, Ruff
 
-## Planned Features
+## Features
 
 - Visualize AI usage patterns among students.
 - Explore relationships between AI usage, academic performance, and well-being.
@@ -19,7 +19,11 @@ The goal is to turn student survey data into clear, interactive visualizations t
 
 ## Project Status
 
-🚧 **Early development** — the API, frontend, and database development setup are initialized. Survey features are not implemented yet.
+The authenticated dashboard is backed by the bundled student AI dataset: 50,000
+records, automatic PostgreSQL seeding, interactive filters, GPA comparisons,
+measurement distributions, and paginated survey records.
+
+See [the feature walkthrough and screenshots](features_readme/kaggle-student-dashboard.md).
 
 
 ## Quick start: everything in Docker
@@ -111,17 +115,19 @@ curl --fail http://localhost:8000/api/health
 # Expected: {"status":"ok","database":"ok"}
 ```
 
-The API initializes the `users` and `auth_sessions` tables at startup. No survey
-data is required yet. Use a migration tool for future schema changes. The health
-endpoint remains public for container readiness. Authentication integration tests
-are skipped when `TEST_DATABASE_URL` is unset; the health tests still run.
+The API initializes account/session tables and survey tables at startup, then
+imports the bundled CSV before accepting requests. A matching SHA-256 skips writes.
+The health endpoint remains public for container readiness. Database integration
+tests are skipped when `TEST_DATABASE_URL` is unset; parser and health tests still
+run. Survey integration tests create and remove isolated schemas in that dedicated
+test database; never point them at a shared or production database.
 
 
 ## Authentication
 
 The frontend supports account registration, sign-in, sign-out, session restoration
-on reload, and automatic access-token refresh. The authenticated account page
-uses the protected profile endpoint. Survey visualizations are still planned.
+on reload, and automatic access-token refresh. After registration, sign-in, or
+session restoration, the frontend opens the authenticated dashboard. Both profile and survey endpoints require a live session.
 
 | Endpoint | Purpose |
 | --- | --- |
@@ -145,3 +151,63 @@ For an HTTPS deployment, set `AUTH_COOKIE_SECURE=true`, use a strong private
 Host and scheme. Local HTTP development uses `AUTH_COOKIE_SECURE=false`.
 This starter does not include email verification, password recovery, or an
 internet-facing deployment configuration.
+
+
+## Survey data and dashboard
+
+The supplied `backend/data/ai_impact_on_students.csv` contains 50,000 records and
+16 fields. It is included in the backend image, so no Kaggle download, account,
+credentials, or manual seeding is needed. All signed-in users explore the same
+survey snapshot; their account and session data remain separate.
+
+Startup validates and imports the CSV in one transaction. Repeated starts do not
+duplicate records. A changed, valid CSV replaces the survey snapshot; invalid
+input or a failed write leaves the prior snapshot intact. The metadata table
+records the source URL, original filename, row count, import time, column types,
+and SHA-256. Original identifiers remain strings and missing measurements remain
+null. See [the data contract](backend/data/README.md).
+
+To validate and re-import the bundled file manually:
+
+```sh
+# From backend/, with DATABASE_URL set as in the local quick start:
+uv run python -m app.survey data/ai_impact_on_students.csv
+```
+
+In Docker:
+
+```sh
+docker compose exec backend .venv/bin/python -m app.survey data/ai_impact_on_students.csv
+```
+
+To use an updated dataset, replace the bundled CSV and rebuild the backend, or
+set `SURVEY_CSV_PATH` to a readable file for a local backend process. This path
+selects the startup source on every restart; keep it consistent with manual
+imports. For containers, mount the replacement file read-only and pass its
+container path as `SURVEY_CSV_PATH`. This optional override is not needed for
+the included data. A configured path that does not exist fails startup; when no
+source is available and no path is explicitly configured, the UI shows an empty
+state instead of fabricated results.
+
+`GET /api/dashboard` requires the same Bearer access token as `/api/auth/me`.
+Query parameters:
+
+| Parameter | Purpose |
+| --- | --- |
+| `major`, `year`, `burnout` | Combine exact category filters; omit for all records |
+| `group_by` | Category for GPA comparisons; defaults to `Major_Category` |
+| `metric` | Numeric measurement for the histogram; defaults to `Weekly_GenAI_Hours` |
+| `page` | 1-based page of 25 original records; resets on filter changes |
+
+The response includes dataset provenance, filtered aggregates, grouped GPA means,
+a 10-bin distribution, and a bounded page of rows. Each response uses one
+consistent database snapshot, even while an import is replacing the dataset.
+Unknown columns/filters and invalid pages return 422; missing or revoked sessions
+return 401. Responses are not cached. SQL parameters bind all selected field
+names and filter values. Filters and aggregation run on the server; the browser
+never downloads all 50,000 rows.
+
+Averages exclude missing values; GPA change is the mean of paired after-minus-
+before values. Histogram counts exclude missing measurements and include the
+maximum in the last bin. Constant measurements use one bin. The dashboard is
+for exploratory analysis and does not imply that AI caused observed GPA changes.

@@ -1,9 +1,16 @@
 from unittest.mock import AsyncMock, patch
 
 import psycopg
+import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
+
+
+@pytest.fixture(autouse=True)
+def auth_setup(monkeypatch):
+    monkeypatch.setenv("JWT_SECRET", "health-test-secret-that-is-long-enough")
+    monkeypatch.setattr("app.main.initialize_database", AsyncMock())
 
 
 def test_health_checks_database(monkeypatch):

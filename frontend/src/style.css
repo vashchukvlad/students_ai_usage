@@ -1,0 +1,7 @@
+ :root { font-family: system-ui, sans-serif; color: #19332c; background: #f4f7f3; }
+body { margin: 0; }
+main { max-width: 760px; margin: 12vh auto; padding: 32px; }
+h1 { font-size: clamp(2rem, 6vw, 3.5rem); line-height: 1.1; }
+p { line-height: 1.7; }
+.eyebrow { color: #39715b; font-weight: 700; }
+[role="status"] { padding: 16px; background: #e1ece4; border-radius: 8px; }
